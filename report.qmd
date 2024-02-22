@@ -12,6 +12,9 @@ format:
     
 execute:
   warning: false
+  
+project:
+  execute-dir: project
 
 from: markdown+emoji 
 reference-location: margin
@@ -137,7 +140,7 @@ We define “whether people care” about getting a return apology as a signific
 ```{r, eval = FALSE}
 # transform data for pairwise t-test
 apology_long <- apology_clean |>
-  select(ResponseId, feelings_youalone, feelings_bothyoufirst) |>
+  select(ResponseId, feelings_youalone, feelings_bothyoufirst, initiator_type) |>
   rename(no = feelings_youalone, yes = feelings_bothyoufirst) |>
   pivot_longer(cols = c("no", "yes"), names_to = "apology_returned") |>
   arrange(apology_returned, ResponseId)
@@ -156,8 +159,25 @@ t.test(value ~ apology_returned, apology_long, paired = TRUE)
 
 Participants responded significantly more negatively when not receiving a return apology (*M* = -18.3, *SD* = 11.9) than when they did receive one (*M* = 7.54, *SD* = 14.4), *t*(45) = -12.58, *p* < .001, 95% CI [-30.01, -21.73].
 
-**Answer:** Yes, people do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.
+
+**Answer: Yes.** People do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.
 
 
 ## Question 2
+
 ***Does this difference vary as function of individual differences in initiator type?***
+
+|   initiator type   | apology returned?  |      mean       |        sd       |
+|--------------------|--------------------|-----------------|-----------------|
+|       always       |       no           |     -13.5       |       11.9      |    
+|       always       |       yes          |      12.8       |       11.1      |
+|    conditional     |       no           |      -23.6      |       11.3      |
+|    conditional     |       yes          |      4.13       |       16.6      |
+|       never        |       no           |      -20.6      |       9.20      |
+|       never        |       yes          |      1.7        |       14.9      |
+
+: Table 1. Mean emotional response to apology scenarios by initiator type {.striped .hover}
+
+## Question 3
+
+***Is a return apology viewed only as a form of forgiveness?***

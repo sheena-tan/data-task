@@ -4,5 +4,4 @@ This project uses data provided by the University of Chicago Booth School of Bus
 # Repository Setup
 - Subdirectory `/data` contains both raw and cleaned data files.
 - Subdirectory `/results` contains tables and figure results.
-- Subdirectory `/report` contains qmd, rmd, and html reports.
 - Scripts `0_initial_setup`, `1_task1` and `2_task2` contain all sandbox and other code used for exploratory data analysis, task 1 of the data task, and task 2 of the data task, respectively.

@@ -3034,6 +3034,7 @@ vertical-align: -.125em;
   <li><a href="#initial-data-exploration" id="toc-initial-data-exploration" class="nav-link" data-scroll-target="#initial-data-exploration">Initial Data Exploration</a></li>
   <li><a href="#question-1" id="toc-question-1" class="nav-link" data-scroll-target="#question-1">Question 1</a></li>
   <li><a href="#question-2" id="toc-question-2" class="nav-link" data-scroll-target="#question-2">Question 2</a></li>
+  <li><a href="#question-3" id="toc-question-3" class="nav-link" data-scroll-target="#question-3">Question 3</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -3242,7 +3243,7 @@ Github Repo Link
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># transform data for pairwise t-test</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>apology_long <span class="ot">&lt;-</span> apology_clean <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ResponseId, feelings_youalone, feelings_bothyoufirst) <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ResponseId, feelings_youalone, feelings_bothyoufirst, initiator_type) <span class="sc">|&gt;</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">no =</span> feelings_youalone, <span class="at">yes =</span> feelings_bothyoufirst) <span class="sc">|&gt;</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(<span class="st">&quot;no&quot;</span>, <span class="st">&quot;yes&quot;</span>), <span class="at">names_to =</span> <span class="st">&quot;apology_returned&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(apology_returned, ResponseId)</span>
@@ -3259,11 +3260,70 @@ Github Repo Link
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(value <span class="sc">~</span> apology_returned, apology_long, <span class="at">paired =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Participants responded significantly more negatively when not receiving a return apology (<em>M</em> = -18.3, <em>SD</em> = 11.9) than when they did receive one (<em>M</em> = 7.54, <em>SD</em> = 14.4), <em>t</em>(45) = -12.58, <em>p</em> &lt; .001, 95% CI [-30.01, -21.73].</p>
-<p><strong>Answer:</strong> Yes, people do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.</p>
+<p><strong>Answer: Yes.</strong> People do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.</p>
 </section>
 <section id="question-2" class="level2">
 <h2 class="anchored" data-anchor-id="question-2">Question 2</h2>
 <p><strong><em>Does this difference vary as function of individual differences in initiator type?</em></strong></p>
+<table class="table-striped table-hover table">
+<caption>Table 1. Mean emotional response to apology scenarios by initiator type</caption>
+<colgroup>
+<col style="width: 27%">
+<col style="width: 27%">
+<col style="width: 22%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>initiator type</th>
+<th>apology returned?</th>
+<th>mean</th>
+<th>sd</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>always</td>
+<td>no</td>
+<td>-13.5</td>
+<td>11.9</td>
+</tr>
+<tr class="even">
+<td>always</td>
+<td>yes</td>
+<td>12.8</td>
+<td>11.1</td>
+</tr>
+<tr class="odd">
+<td>conditional</td>
+<td>no</td>
+<td>-23.6</td>
+<td>11.3</td>
+</tr>
+<tr class="even">
+<td>conditional</td>
+<td>yes</td>
+<td>4.13</td>
+<td>16.6</td>
+</tr>
+<tr class="odd">
+<td>never</td>
+<td>no</td>
+<td>-20.6</td>
+<td>9.20</td>
+</tr>
+<tr class="even">
+<td>never</td>
+<td>yes</td>
+<td>1.7</td>
+<td>14.9</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="question-3" class="level2">
+<h2 class="anchored" data-anchor-id="question-3">Question 3</h2>
+<p><strong><em>Is a return apology viewed only as a form of forgiveness?</em></strong></p>
 </section>
 </section>
 
