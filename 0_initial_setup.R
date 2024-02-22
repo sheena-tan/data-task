@@ -16,11 +16,13 @@ skimr::skim(apology_data)
 
 ## data cleaning ----
 apology_clean <- apology_data |>
-  filter(IPAddress != "72.83.222.239") |> #see comments field
+  filter(ResponseId != "R_bBJ75JWs3W8KSgF") |> #see comments field
   filter(Progress > 30) |>
   filter(passedattn == "yes") |>
-  select(initiator_type, starts_with("feelings_"), starts_with("outcome_"),
+  select(ResponseId, initiator_type, starts_with("feelings_"), starts_with("outcome_"),
          blame_1, real_imaginary, describe, comments)
+
+write_rds(apology_clean, here("data/apology_clean.rds"))
 
 
 ## eda ----
@@ -36,7 +38,6 @@ plot_density_boxplot <- function(data, x_variable) {
     theme_minimal() +
     theme(
       axis.text.y = element_blank(),
-      axis.title.y = element_blank(),
       axis.ticks.y = element_blank()
     )
 

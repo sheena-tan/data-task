@@ -44,10 +44,10 @@ skimr::skim(apology_data)
 
 ## data cleaning ----
 apology_clean <- apology_data |>
-  filter(IPAddress != "72.83.222.239") |> #see comments field
+  filter(ResponseId != "R_bBJ75JWs3W8KSgF") |> #see comments field
   filter(Progress > 30) |>
   filter(passedattn == "yes") |>
-  select(initiator_type, starts_with("feelings_"), starts_with("outcome_"),
+  select(ResponseId, initiator_type, starts_with("feelings_"), starts_with("outcome_"),
          blame_1, real_imaginary, describe, comments)
 ```
 
@@ -68,31 +68,96 @@ I wonder if these results map onto *agreeableness* as a personality trait then, 
 
 ::: {#fig-eda layout-ncol=2 layout-nrow=4}
 
-![Overall - Not Returned](results/alone_total.png){#fig-on}
+![Overall - Apology not returned](results/alone_total.png){#fig-on}
 
-![Overall - Returned](results/both_total.png){#fig-or}
+![Overall - Apology returned](results/both_total.png){#fig-or}
 
-![Always - Not Returned](results/alone_always.png){#fig-an}
+![Always - Apology not returned](results/alone_always.png){#fig-an}
 
-![Always - Returned](results/both_always.png){#fig-ar}
+![Always - Apology returned](results/both_always.png){#fig-ar}
 
-![Conditional - Not Returned](results/alone_cond.png){#fig-cn}
+![Conditional - Apology not returned](results/alone_cond.png){#fig-cn}
 
-![Conditional - Returned](results/both_cond.png){#fig-cr}
+![Conditional - Apology returned](results/both_cond.png){#fig-cr}
 
-![Never - Not Returned](results/alone_never.png){#fig-nn}
+![Never - Apology not returned](results/alone_never.png){#fig-nn}
 
-![Never - Returned](results/both_never.png){#fig-nr}
+![Never - Apology returned](results/both_never.png){#fig-nr}
 
 Feeling ratings by initiator type after (not) receiving a return apology
 :::
 
 
+```{r, eval = FALSE}
+# code for reproducibility 
+plot_density_boxplot <- function(data, x_variable) {
+  p1 <- ggplot(data, aes({{x_variable}})) +
+    geom_boxplot() +
+    xlim(-30, 30) +
+    theme_void()
+
+  p2 <- ggplot(data, aes({{x_variable}})) +
+    geom_density() +
+    xlim(-30, 30) +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+
+  p1/p2 + plot_layout(heights = unit(c(1, 5), c("cm", "null")))
+}
+
+alone_total <- plot_density_boxplot(apology_clean, feelings_youalone)
+both_total <- plot_density_boxplot(apology_clean, feelings_bothyoufirst)
+
+alone_always <- apology_clean |> filter(initiator_type == "always") |>
+  plot_density_boxplot(feelings_youalone)
+both_always <- apology_clean |> filter(initiator_type == "always") |>
+  plot_density_boxplot(feelings_bothyoufirst)
+
+alone_cond <- apology_clean |> filter(initiator_type == "conditional") |>
+  plot_density_boxplot(feelings_youalone)
+both_cond <- apology_clean |> filter(initiator_type == "conditional") |>
+  plot_density_boxplot(feelings_bothyoufirst)
+
+alone_never <- apology_clean |> filter(initiator_type == "never") |>
+  plot_density_boxplot(feelings_youalone)
+both_never <- apology_clean |> filter(initiator_type == "never") |>
+  plot_density_boxplot(feelings_bothyoufirst)
+```
+
+
 ## Question 1
 
-*Do people care about getting a return apology after being the first to apologize?*
+***Do people care about getting a return apology after being the first to apologize?***
 
-We define “whether people care” about getting a return apology as a significant difference in emotional response within participants between the two apology scenarios -- not getting (`feelings_youalone`) and getting (`feelings_bothyoufirst`) a return apology. A pairwise t-test was conducted to compare the two scenarios. 
+We define “whether people care” about getting a return apology as a significant difference in emotional response within participants between the two apology scenarios -- not getting (`feelings_youalone`) and getting (`feelings_bothyoufirst`) a return apology. As the sample is sufficiently large, a paired samples t-test was conducted to compare the two scenarios. 
+
+```{r, eval = FALSE}
+# transform data for pairwise t-test
+apology_long <- apology_clean |>
+  select(ResponseId, feelings_youalone, feelings_bothyoufirst) |>
+  rename(no = feelings_youalone, yes = feelings_bothyoufirst) |>
+  pivot_longer(cols = c("no", "yes"), names_to = "apology_returned") |>
+  arrange(apology_returned, ResponseId)
+
+# summary statistics
+apology_long |> group_by(apology_returned) |>
+  summarize(
+    count = n(),
+    mean = mean(value, na.rm = TRUE),
+    sd = sd(value, na.rm = TRUE)
+  )
+
+# pairwise t-test
+t.test(value ~ apology_returned, apology_long, paired = TRUE)
+```
+
+Participants responded significantly more negatively when not receiving a return apology (*M* = -18.3, *SD* = 11.9) than when they did receive one (*M* = 7.54, *SD* = 14.4), *t*(45) = -12.58, *p* < .001, 95% CI [-30.01, -21.73].
+
+**Answer:** Yes, people do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.
 
 
-
+## Question 2
+***Does this difference vary as function of individual differences in initiator type?***
