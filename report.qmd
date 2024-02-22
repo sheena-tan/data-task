@@ -242,6 +242,7 @@ t.test(value ~ apology_returned, apology_long_q1, paired = TRUE,
 
 # one-way ANOVA
 anova_initiator <- aov(.res ~ initiator_type, data = apology_wide)
+summary(anova_initiator)
 
 # Tukey's test
 TukeyHSD(anova_initiator)
@@ -275,13 +276,102 @@ t.test(value ~ apology_returned, apology_long_q3, paired = TRUE)
 
 ## Part A
 
-Produce a single bar graph that shows the average of the “feelings” variable for all six scenarios, in order of decreasing value. Include error bars (standard errors or confidence intervals). Label fully. Describe your observations in 1-2 sentences.
-
 ![Figure 3: Mean emotional reaction rating across apology scenarios](results/bar_graph_desc.png)
+```{r, eval = FALSE}
+## code for reproducibility ----
+# data transformation
+col.mean <- apology_clean |>
+  select(starts_with("feelings"), -starts_with("feelings_DO"), -feelings_exp) |>
+  apply(2, mean)
+
+col.sd <- apology_clean |>
+  select(starts_with("feelings"), -starts_with("feelings_DO"), -feelings_exp) |>
+  apply(2, sd)
+
+apology_means <- bind_rows(col.mean, col.sd) |>
+  mutate(statistic = c("mean", "sd")) |>
+  pivot_longer(starts_with("feelings"), names_to = "scenario") |>
+  pivot_wider(names_from = statistic, values_from = value) |>
+  mutate(
+    sd_lower = mean - sd,
+    sd_upper = mean + sd
+  )
+
+# bar graph desc
+bar_graph_desc <- apology_means |>
+  ggplot(aes(x = reorder(scenario, -mean), y = mean, fill = scenario)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = sd_lower, ymax = sd_upper), width = 0.15) +
+  theme_ggdist() +
+  scale_fill_manual(values = c("#d95f02", "#d95f02", "#1b9e77", "#1b9e77", "#1b9e77", "#1b9e77")) +
+  theme(
+    plot.subtitle = element_markdown(lineheight = 0.1),
+    legend.position = "none"
+  ) +
+  scale_x_discrete(
+    labels = c("them first", "you first", "them alone", "forgive only",
+               "neither", "you alone")
+  ) +
+  labs(
+    x = "apology scenario",
+    y = "emotional reaction rating",
+    subtitle = "<b style='color: #d95f02;'>Mutual apologies</b> feel better than
+    <b style='color: #1b9e77;'>one-sided</b> ones or <b style='color: #1b9e77;'>none at all</b>.
+    \n<b>Not giving</b> a return apology does not feel quite as bad as <b>not getting</b> one."
+  )
+```
+
 
 ## Part B
 
-Conduct a one way ANOVA to determine if there are differences in feelings across the six scenarios. Then perform pairwise t-tests to compare `feelings_youalone` to the other five scenarios. Describe your conclusions in 1-2 sentences.
+The results of the one-way ANOVA to determine if there are differences in emotional reaction ratings across the six apology scenarios show that there is a *statistically significant difference* in residuals between at least two initiator groups (*F*(5, 270) = 48.34, *p* = < 2e-16), suggesting that people would truly feel differently for different scenarios. 
+
+The results of the paired t-tests between `feelings_youalone` and the other apology scenarios suggest that these differences are all highly significant, but most significant between apologizing alone and mutual apology where the other party apologizes first.
+
+|   scenario     |     t        |      df      |     p        |     95% CI     |
+|----------------|--------------|--------------|--------------|----------------|
+| feelings_bothyoufirst     |   12.58     |      45      | 2.458e-16*** | 21.73, 30.01    |
+| feelings_themalone        |   4.287     |      45      | 9.443e-05*** | 6.961, 19.30    |
+| feelings_boththemfirst    |    14.56    |      45      | < 2.2e-16*** | 30.81, 40.71    |
+| feelings_neither          |    2.030    |      45      | 0.04825**    | 0.03189, 7.925  |
+| feelings_youaloneforgiven |    -2.367   |      45      | 3.073e-04*** | -9.171, -0.7419 |
+
+: Table 2. Paired samples t-test of return apology scenarios {.striped .hover}
+
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# data transformation
+apology_b <- apology_clean |>
+  select(ResponseId, starts_with("feelings"), -starts_with("feelings_DO"),
+         -feelings_exp) |>
+  pivot_longer(
+    cols = starts_with("feelings"),
+    names_to = "scenario"
+  )
+
+# one way anova
+anova_all <- aov(value ~ scenario, data = apology_b)
+summary(anova_all)
+
+# pairwise t-test by initiator type
+apology_b1 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_bothyoufirst")
+apology_b2 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_themalone")
+apology_b3 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_boththemfirst")
+apology_b4 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_neither")
+apology_b5 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_youaloneforgiven")
+
+t.test(formula = value ~ scenario, data = apology_b1, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b2, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b3, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b4, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b5, paired = TRUE)
+```
 
 ## Part C
 

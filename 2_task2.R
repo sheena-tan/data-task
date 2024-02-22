@@ -52,14 +52,45 @@ bar_graph_desc <- apology_means |>
   )
 
 
-# Part B
-# Conduct a one way ANOVA to determine if there are differences in feelings across the six scenarios. Then perform pairwise t-tests to compare feelings_youalone to the other five scenarios. Describe your conclusions in 1-2 sentences.
-#
+# Part B ----
+# data transformation
+apology_b <- apology_clean |>
+  select(ResponseId, starts_with("feelings"), -starts_with("feelings_DO"),
+         -feelings_exp) |>
+  pivot_longer(
+    cols = starts_with("feelings"),
+    names_to = "scenario"
+  )
+
+# one way anova
+anova_all <- aov(value ~ scenario, data = apology_b)
+summary(anova_all)
+
+# pairwise t-test by initiator type
+apology_b1 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_bothyoufirst")
+apology_b2 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_themalone")
+apology_b3 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_boththemfirst")
+apology_b4 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_neither")
+apology_b5 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_youaloneforgiven")
+
+t.test(formula = value ~ scenario, data = apology_b1, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b2, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b3, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b4, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b5, paired = TRUE)
+
+
 # Part C
-# Create a graph showing the proportion of people choosing each of the different options for the following variable: outcome_binary1 Conduct a test to determine if the proportion differences across the answers are significantly different from one another.
-#
+# Create a graph showing the proportion of people choosing each of the different options for the following variable: outcome_binary1
+# Conduct a test to determine if the proportion differences across the answers are significantly different from one another.
+
 # Part D
-# Natural Language Processing (NLP) exercise: Find a way to analyze the sentiment and/or emotions present in the free form text responses in the “describe” variable. Describe your observations in a few sentences.
+# Find a way to analyze the sentiment and/or emotions present in the free form text responses in the “describe” variable. Describe your observations in a few sentences.
 
 # write out plots
 ggsave(here("results/bar_graph_desc.png"), bar_graph_desc)
