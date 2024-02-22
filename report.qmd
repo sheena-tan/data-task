@@ -1,0 +1,98 @@
+---
+title: "Data Task"
+subtitle: |
+  | University of Chicago Booth PREDOC
+author: "Sheena Tan"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[https://github.com/sheena-tan/data-task](https://github.com/sheena-tan/data-task)
+
+:::
+
+# Introduction
+
+This project uses data provided by the University of Chicago Booth School of Business as part of a data task for a pre-doctoral research position. The data is from a study aiming to understand how the presence or absence of a return apology can affect the way that people feel, and whether these affects vary as a result of one's willingness to apologize first.
+
+## Data Cleaning
+
+A glimpse of the data reveals that all respondents (*N = 61*) consented to participate. Removing participants that did not complete the majority of the survey, give legitimate responses, or pass the attention check resulted in *N = 46* total participants.  
+
+```{r, eval = FALSE}
+apology_data <- read_csv(here("data/apology_data.csv"))
+
+skimr::skim(apology_data)
+# consent: n_unique = 1; all responses agreed
+# passedattn: n_unique = 2; need to clean responses that did not pass
+# Progress: mean = 84.1; need to clean responses that did not answer about feelings
+
+## data cleaning ----
+apology_clean <- apology_data |>
+  filter(IPAddress != "72.83.222.239") |> #see comments field
+  filter(Progress > 30) |>
+  filter(passedattn == "yes") |>
+  select(initiator_type, starts_with("feelings_"), starts_with("outcome_"),
+         blame_1, real_imaginary, describe, comments)
+```
+
+# Task 1
+
+## Initial Data Exploration
+
+There definitely seems to be a significant difference between the feelings of those who do and don't receive return apologies, with the IQR jumping from about (-30,-10) without to (0,20) with. In other words, people feel very bad when they do not get a return apology but feel much better when they do.
+
+This increase varies by initiator type. Interestingly:
+
+- Conditional types experience the **strongest negative reactions** to no return apology (-30,23). 
+- Always types roughly flipped from negative (-20,-10) to positive (10,20) when they did not versus did receive a return apology. The distributions remained **very similar**.
+- Never types were the **most negative overall** across both scenarios. 
+
+I wonder if these results map onto *agreeableness* as a personality trait then, though everything is likely heavily dependent on by people's lived experiences.
+
+
+::: {#fig-eda layout-ncol=2 layout-nrow=4}
+
+![Overall - Not Returned](results/alone_total.png){#fig-on}
+
+![Overall - Returned](results/both_total.png){#fig-or}
+
+![Always - Not Returned](results/alone_always.png){#fig-an}
+
+![Always - Returned](results/both_always.png){#fig-ar}
+
+![Conditional - Not Returned](results/alone_cond.png){#fig-cn}
+
+![Conditional - Returned](results/both_cond.png){#fig-cr}
+
+![Never - Not Returned](results/alone_never.png){#fig-nn}
+
+![Never - Returned](results/both_never.png){#fig-nr}
+
+Feeling ratings by initiator type after (not) receiving a return apology
+:::
+
+
+## Question 1
+
+*Do people care about getting a return apology after being the first to apologize?*
+
+We define “whether people care” about getting a return apology as a significant difference in emotional response within participants between the two apology scenarios -- not getting (`feelings_youalone`) and getting (`feelings_bothyoufirst`) a return apology. A pairwise t-test was conducted to compare the two scenarios. 
+
+
+

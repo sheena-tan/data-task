@@ -1,1 +1,71 @@
+---
+title: "Data Task"
+subtitle: |
+  | University of Chicago Booth PREDOC
+author: "Sheena Tan"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[https://github.com/sheena-tan/data-task](https://github.com/sheena-tan/data-task)
+
+:::
+
+# Introduction
+
+This data task uses data provided by the University of Chicago Booth School of Business as part of a data task for a pre-doctoral research position. The data is from a study aiming to understand how the presence or absence of a return apology can affect the way that people feel, and whether these affects vary as a result of one's willingness to apologize first.
+
+# Data Cleaning
+
+A glimpse of the data reveals that all respondents (N = 61) consented to participate. Removing participants that did not complete the majority of the survey, give legitimate responses, or pass the attention check resulted in N = 46 total participants.  
+
+```{r, eval = FALSE}
+apology_data <- read_csv(here("data/apology_data.csv"))
+
+skimr::skim(apology_data)
+# consent: n_unique = 1; all responses agreed
+# passedattn: n_unique = 2; need to clean responses that did not pass
+# Progress: mean = 84.1; need to clean responses that did not answer about feelings
+
+## data cleaning ----
+apology_clean <- apology_data |>
+  filter(IPAddress != "72.83.222.239") |> #see comments field
+  filter(Progress > 30) |>
+  filter(passedattn == "yes") |>
+  select(initiator_type, starts_with("feelings_"), starts_with("outcome_"),
+         blame_1, real_imaginary, describe, comments)
+```
+
+# Task 1
+
+## Initial Data Exploration
+
+There definitely seems to be a significant difference between the feelings of those who do and don't get return apologies (Task1). There also seems to be significant differences between the different types of people (Task2). I wonder if this maps onto agreeableness personality-wise, or is it more related to people's lived experiences and morals?
+
+```{r, out.width='50%', fig.show='hold', fig.cap='left, middle, right', echo = FALSE}
+library(here)
+library(knitr)
+include_graphics(here("results/alone_total.png"))
+include_graphics(here("results/both_total.png"))
+```
+
+## Question 1
+
+
 
