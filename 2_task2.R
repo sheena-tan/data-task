@@ -1,10 +1,10 @@
 #### Task 2 ----
-#### bar graph for feelings_,
 
 library(tidyverse)
 library(here)
 library(ggdist)
 library(ggtext)
+library(tidytext)
 
 # load data
 apology_clean <- read_rds(here("data/apology_clean.rds"))
@@ -116,9 +116,41 @@ bar_graph_outcome <- apology_c |>
 prop.test(x = 36, n = 46, p = 0.5, correct = FALSE)
 
 # Part D
-# Find a way to analyze the sentiment and/or emotions present in the free form text responses in the “describe” variable. Describe your observations in a few sentences.
+# AFINN lexicon rating sentiment keywords from -5 to 5
+lexicon <- get_sentiments("afinn")
+
+# sentiment analysis
+apology_sentiment <- apology_clean |>
+  unnest_tokens(word, describe) |>
+  inner_join(lexicon) |>
+  group_by(ResponseId, initiator_type) |>
+  summarize(sentiment = sum(value) / n())
+
+boxplot_sentiment <- ggplot(apology_sentiment, aes(sentiment, color = initiator_type)) +
+  geom_boxplot() +
+  theme_ggdist() +
+  scale_fill_brewer(
+    palette = "Dark2",
+    aesthetics = c("color","fill"),
+    guide = "none"
+  ) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.subtitle = element_markdown()
+  ) +
+  annotate("text", x = 1.3, y = 0.25, label = "never", color = "#7570B3") +
+  annotate("text", x = 1.5, y = 0.02, label = "conditional", color = "#d95f02") +
+  annotate("text", x = 0.6, y = -0.23, label = "always", color = "#1b9e77") +
+  labs(
+    x = "apology scenario",
+    y = "initiator type",
+    subtitle = "<b>Sentiment</b> of participant descriptions varies by <b>initiator type</b>."
+  )
+
 
 # write out plots
 ggsave(here("results/bar_graph_desc.png"), bar_graph_desc)
 ggsave(here("results/bar_graph_outcome.png"), bar_graph_outcome)
+ggsave(here("results/boxplot_sentiment.png"), boxplot_sentiment)
 

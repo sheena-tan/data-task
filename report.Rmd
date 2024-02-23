@@ -11,31 +11,32 @@ format:
     embed-resources: true
     
 execute:
-  echo: false
   warning: false
+  
+project:
+  execute-dir: project
 
 from: markdown+emoji 
 reference-location: margin
 citation-location: margin
 ---
 
-::: {.callout-tip icon=false}
-
+::: {.callout-tip icon="false"}
 ## Github Repo Link
 
-[https://github.com/sheena-tan/data-task](https://github.com/sheena-tan/data-task)
-
+<https://github.com/sheena-tan/data-task>
 :::
 
 # Introduction
 
-This data task uses data provided by the University of Chicago Booth School of Business as part of a data task for a pre-doctoral research position. The data is from a study aiming to understand how the presence or absence of a return apology can affect the way that people feel, and whether these affects vary as a result of one's willingness to apologize first.
+This project uses data provided by the University of Chicago Booth School of Business as part of a data task for a pre-doctoral research position. The data is from a study aiming to understand how the presence or absence of a return apology can affect the way that people feel, and whether these affects vary as a result of one's willingness to apologize first.
 
-# Data Cleaning
+## Data Cleaning
 
-A glimpse of the data reveals that all respondents (N = 61) consented to participate. Removing participants that did not complete the majority of the survey, give legitimate responses, or pass the attention check resulted in N = 46 total participants.  
+A glimpse of the data reveals that all respondents (*N = 61*) consented to participate. Removing participants that did not complete the majority of the survey, give legitimate responses, or pass the attention check resulted in *N = 46* total participants.
 
 ```{r, eval = FALSE}
+## code for reproducibility ----
 apology_data <- read_csv(here("data/apology_data.csv"))
 
 skimr::skim(apology_data)
@@ -45,27 +46,394 @@ skimr::skim(apology_data)
 
 ## data cleaning ----
 apology_clean <- apology_data |>
-  filter(IPAddress != "72.83.222.239") |> #see comments field
+  filter(ResponseId != "R_bBJ75JWs3W8KSgF") |> #see comments field
   filter(Progress > 30) |>
   filter(passedattn == "yes") |>
-  select(initiator_type, starts_with("feelings_"), starts_with("outcome_"),
+  select(ResponseId, initiator_type, starts_with("feelings_"), starts_with("outcome_"),
          blame_1, real_imaginary, describe, comments)
+
+# transform data for pairwise t-test
+apology_long_q1 <- apology_clean |>
+  select(ResponseId, initiator_type, feelings_youalone, feelings_bothyoufirst) |>
+  rename(no = feelings_youalone, yes = feelings_bothyoufirst) |>
+  pivot_longer(cols = c("no", "yes"), names_to = "apology_returned") |>
+  arrange(apology_returned, ResponseId)
+
+apology_long_q3 <- apology_clean |>
+  select(ResponseId, feelings_bothyoufirst, feelings_youaloneforgiven) |>
+  rename(no = feelings_youaloneforgiven, yes = feelings_bothyoufirst) |>
+  pivot_longer(cols = c("no", "yes"), names_to = "apology_returned") |>
+  arrange(apology_returned, ResponseId)
+
+# transform data for one-way ANOVA
+apology_wide <- apology_clean |>
+  select(ResponseId, initiator_type, feelings_youalone, feelings_bothyoufirst) |>
+  mutate(
+    .res = feelings_bothyoufirst - feelings_youalone,
+    initiator_type = as.factor(initiator_type)
+  )
 ```
 
 # Task 1
 
 ## Initial Data Exploration
 
-There definitely seems to be a significant difference between the feelings of those who do and don't get return apologies (Task1). There also seems to be significant differences between the different types of people (Task2). I wonder if this maps onto agreeableness personality-wise, or is it more related to people's lived experiences and morals?
+There definitely seems to be a significant difference between the feelings of those who do and don't receive return apologies, with the IQR jumping from about (-30,-10) without to (0,20) with. In other words, people feel very bad when they do not get a return apology but feel much better when they do.
 
-```{r, out.width='50%', fig.show='hold', fig.cap='left, middle, right', echo = FALSE}
-library(here)
-library(knitr)
-include_graphics(here("results/alone_total.png"))
-include_graphics(here("results/both_total.png"))
+This increase varies by initiator type. Interestingly:
+
+-   Conditional types experience the **strongest negative reactions** to no return apology (-30,23).
+-   Always types roughly flipped from negative (-20,-10) to positive (10,20) when they did not versus did receive a return apology. The distributions remained **very similar**.
+-   Never types were the **most negative overall** across both scenarios.
+
+I wonder if these results map onto *agreeableness* as a personality trait then, though everything is likely heavily dependent on by people's lived experiences. I also wonder if people that think they always apologize first actually do, or if they are unable to recall instances where they didn't. It would be interesting to see how they weight the importance of someone else apologizing first; if it's not important to them, maybe they simply do not remember.
+
+::: {#fig-eda layout-ncol="2" layout-nrow="4"}
+![Overall - Apology not returned](results/alone_total.png){#fig-on}
+
+![Overall - Apology returned](results/both_total.png){#fig-or}
+
+![Always - Apology not returned](results/alone_always.png){#fig-an}
+
+![Always - Apology returned](results/both_always.png){#fig-ar}
+
+![Conditional - Apology not returned](results/alone_cond.png){#fig-cn}
+
+![Conditional - Apology returned](results/both_cond.png){#fig-cr}
+
+![Never - Apology not returned](results/alone_never.png){#fig-nn}
+
+![Never - Apology returned](results/both_never.png){#fig-nr}
+
+Feeling ratings by initiator type after (not) receiving a return apology
+:::
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# function to create boxplot + density plot
+plot_density_boxplot <- function(data, x_variable) {
+  p1 <- ggplot(data, aes({{x_variable}})) +
+    geom_boxplot() +
+    xlim(-30, 30) +
+    theme_void()
+
+  p2 <- ggplot(data, aes({{x_variable}})) +
+    geom_density() +
+    xlim(-30, 30) +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+
+  p1/p2 + plot_layout(heights = unit(c(1, 5), c("cm", "null")))
+}
+
+alone_total <- plot_density_boxplot(apology_clean, feelings_youalone)
+both_total <- plot_density_boxplot(apology_clean, feelings_bothyoufirst)
+
+alone_always <- apology_clean |> filter(initiator_type == "always") |>
+  plot_density_boxplot(feelings_youalone)
+both_always <- apology_clean |> filter(initiator_type == "always") |>
+  plot_density_boxplot(feelings_bothyoufirst)
+
+alone_cond <- apology_clean |> filter(initiator_type == "conditional") |>
+  plot_density_boxplot(feelings_youalone)
+both_cond <- apology_clean |> filter(initiator_type == "conditional") |>
+  plot_density_boxplot(feelings_bothyoufirst)
+
+alone_never <- apology_clean |> filter(initiator_type == "never") |>
+  plot_density_boxplot(feelings_youalone)
+both_never <- apology_clean |> filter(initiator_type == "never") |>
+  plot_density_boxplot(feelings_bothyoufirst)
 ```
 
 ## Question 1
 
+***Do people care about getting a return apology after being the first to apologize?***
 
+We define “whether people care” about getting a return apology as a significant difference in emotional response within participants between the two apology scenarios -- not getting (`feelings_youalone`) and getting (`feelings_bothyoufirst`) a return apology. As the sample is sufficiently large, a paired samples t-test was conducted to compare the two scenarios.
 
+```{r, eval = FALSE}
+# summary statistics
+apology_long_q1 |> group_by(apology_returned) |>
+  summarize(
+    count = n(),
+    mean = mean(value, na.rm = TRUE),
+    sd = sd(value, na.rm = TRUE)
+  )
+
+# pairwise t-test
+t.test(value ~ apology_returned, apology_long_q1, paired = TRUE)
+```
+
+**Results:** Participants responded *significantly more negatively* when not receiving a return apology (*M* = -18.3, *SD* = 11.9) than when they did receive one (*M* = 7.54, *SD* = 14.4), *t*(45) = -12.58, *p* \< .001, 95% CI \[-30.01, -21.73\].
+
+**Answer: Yes.** People do not like when they do not receive a return apology. We can be 95% confident that the true difference between emotional responses is approximately 30 to 22 points more negative for those who do not receive a return apology than those who do.
+
+## Question 2
+
+***Does this difference vary as function of individual differences in initiator type?***
+
+![Figure 2: Difference in emotional reaction to getting and not getting a return apology by initiator type](results/residual_boxplot.png)
+
+A data exploration suggests that this difference indeed holds for each initiator type. To confirm, we conduct the same paired samples t-test, grouping by initiator type. We find that participants of each initiator type still respond *significantly more negatively* when not receiving a return apology than when they did receive one, though the extent of the differences vary.
+
+| initiator type | apology returned? | mean  | sd   |
+|----------------|-------------------|-------|------|
+| always         | no                | -13.5 | 11.9 |
+| always         | yes               | 12.8  | 11.1 |
+| conditional    | no                | -23.6 | 11.3 |
+| conditional    | yes               | 4.13  | 16.6 |
+| never          | no                | -20.6 | 9.20 |
+| never          | yes               | 1.7   | 14.9 |
+
+: Table 1. Descriptive statistics and paired samples t-test of return apology scenarios by initiator type {.striped .hover}
+
+| initiator type | t      | df  | p               | 95% CI         |
+|----------------|--------|-----|-----------------|----------------|
+| always         | -10.47 | 20  | 1.464e-09\*\*\* | -31.47, -21.01 |
+| conditional    | -5.966 | 14  | 3.447e-05\*\*\* | -37.70, -17.76 |
+| never          | -5.666 | 9   | 3.073e-04\*\*\* | -31.20, -13.40 |
+
+: {.striped .hover}
+
+To investigate if this variation in the extent of the differences is significantly different between the three initiator types, we conduct a one-way ANOVA with the null hypothesis that the true difference between emotional reactions when receiving and not receiving a return apology for each initiator type are equal.
+
+**Results:** There was *no statistically significant difference* in residuals between at least two initiator groups (*F*(2, 43) = 0.457, *p* = 0.636). Tukey’s HSD Test for multiple comparisons confirmed that there was no statistically significant difference between conditional initiators and always initiators (*p* = 0.947), never initiators and always initiators (*p* = 0.749), or never initiators and conditional initiators (*p* = 0.617).
+
+**Answer: No.** Though the finding that people do not like when they do not receive a return apology holds true for all three initiator types, the means of this difference do not vary significantly between the types. However, this does not mean that patterns of interest specific to initiator types do not exist, as discussed in the initial data exploration. For example, conditional types seem to experience the strongest negative reactions to no return apology, which may be a result of or explanation for why this type avoids apologizing first.
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# boxplot eda
+apology_wide |> ggplot(aes(initiator_type, .res)) +
+  geom_boxplot() +
+  labs(x = "initiator type", y = "residual") +
+  theme_minimal()
+
+# summary statistics by initiator type
+apology_long_q1 |>
+  group_by(initiator_type, apology_returned) |>
+  summarize(
+    count = n(),
+    mean = mean(value, na.rm = TRUE),
+    sd = sd(value, na.rm = TRUE)
+  )
+
+# pairwise t-test by initiator type
+t.test(value ~ apology_returned, apology_long_q1, paired = TRUE,
+       subset = initiator_type == "always")
+
+t.test(value ~ apology_returned, apology_long_q1, paired = TRUE,
+       subset = initiator_type == "conditional")
+
+t.test(value ~ apology_returned, apology_long_q1, paired = TRUE,
+       subset = initiator_type == "never")
+
+# one-way ANOVA
+anova_initiator <- aov(.res ~ initiator_type, data = apology_wide)
+summary(anova_initiator)
+
+# Tukey's test
+TukeyHSD(anova_initiator)
+```
+
+## Question 3
+
+***Is a return apology simply viewed as a form of forgiveness?***
+
+We define apology being "simply viewed" as a form of forgiveness as there being no significant difference between receiving a return apology (`feelings_bothyoufirst`) and receiving no return apology but being forgiven (`feelings_youaloneforgiven`).
+
+```{r, eval = FALSE}
+# summary statistics
+apology_long_q3 |> group_by(apology_returned) |>
+  summarize(
+    count = n(),
+    mean = mean(value, na.rm = TRUE),
+    sd = sd(value, na.rm = TRUE)
+  )
+
+# pairwise t-test
+t.test(value ~ apology_returned, apology_long_q3, paired = TRUE)
+```
+
+**Results:** Even when they were told they were forgiven, participants still responded *significantly more negatively* when not receiving a return apology (*M* = -13.4, *SD* = 15.9) than when they did receive one (*M* = 7.54, *SD* = 14.4), *t*(45) = -7.838, *p* \< .001, 95% CI \[-26.29, -15.54\].
+
+**Answer: No.** A return apology means more than mere forgiveness. If forgiveness was an equal substitute for a return apology, being forgiven without a return apology should result in the same emotional response as receiving one. Extensive literature on conciliation suggests that verbal apologies function as a strategy for humans to seek forgiveness when they have harmed others (Fehr et. al, 2010; McCullough, 2008). As such, receiving a return apology signals that the other party is likewise seeking your forgiveness, not only making an act of forgiving you.
+
+# Task 2
+
+## Part A
+
+![Figure 3: Mean emotional reaction rating across apology scenarios](results/bar_graph_desc.png)
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# data transformation
+col.mean <- apology_clean |>
+  select(starts_with("feelings"), -starts_with("feelings_DO"), -feelings_exp) |>
+  apply(2, mean)
+
+col.sd <- apology_clean |>
+  select(starts_with("feelings"), -starts_with("feelings_DO"), -feelings_exp) |>
+  apply(2, sd)
+
+apology_means <- bind_rows(col.mean, col.sd) |>
+  mutate(statistic = c("mean", "sd")) |>
+  pivot_longer(starts_with("feelings"), names_to = "scenario") |>
+  pivot_wider(names_from = statistic, values_from = value) |>
+  mutate(
+    sd_lower = mean - sd,
+    sd_upper = mean + sd
+  )
+
+# bar graph desc
+bar_graph_desc <- apology_means |>
+  ggplot(aes(x = reorder(scenario, -mean), y = mean, fill = scenario)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = sd_lower, ymax = sd_upper), width = 0.15) +
+  theme_ggdist() +
+  scale_fill_manual(values = c("#d95f02", "#d95f02", "#1b9e77", "#1b9e77", "#1b9e77", "#1b9e77")) +
+  theme(
+    plot.subtitle = element_markdown(lineheight = 0.1),
+    legend.position = "none"
+  ) +
+  scale_x_discrete(
+    labels = c("them first", "you first", "them alone", "forgive only",
+               "neither", "you alone")
+  ) +
+  labs(
+    x = "apology scenario",
+    y = "emotional reaction rating",
+    subtitle = "<b style='color: #d95f02;'>Mutual apologies</b> feel better than
+    <b style='color: #1b9e77;'>one-sided</b> ones or <b style='color: #1b9e77;'>none at all</b>.
+    \n<b>Not giving</b> a return apology does not feel quite as bad as <b>not getting</b> one."
+  )
+```
+
+## Part B
+
+The results of the one-way ANOVA to determine if there are differences in emotional reaction ratings across the six apology scenarios show that there is a *statistically significant difference* in residuals between at least two initiator groups (*F*(5, 270) = 48.34, *p* = \< 2e-16), suggesting that people would truly feel differently for different scenarios.
+
+The results of the paired t-tests between `feelings_youalone` and the other apology scenarios suggest that these differences are all highly significant, but most significant between apologizing alone and mutual apology where the other party apologizes first.
+
+| scenario                  | t      | df  | p                | 95% CI          |
+|---------------------------|--------|-----|------------------|-----------------|
+| feelings_bothyoufirst     | 12.58  | 45  | 2.458e-16\*\*\*  | 21.73, 30.01    |
+| feelings_themalone        | 4.287  | 45  | 9.443e-05\*\*\*  | 6.961, 19.30    |
+| feelings_boththemfirst    | 14.56  | 45  | \< 2.2e-16\*\*\* | 30.81, 40.71    |
+| feelings_neither          | 2.030  | 45  | 0.04825\*\*      | 0.03189, 7.925  |
+| feelings_youaloneforgiven | -2.367 | 45  | 3.073e-04\*\*\*  | -9.171, -0.7419 |
+
+: Table 2. Paired samples t-test of return apology scenarios {.striped .hover}
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# data transformation
+apology_b <- apology_clean |>
+  select(ResponseId, starts_with("feelings"), -starts_with("feelings_DO"),
+         -feelings_exp) |>
+  pivot_longer(
+    cols = starts_with("feelings"),
+    names_to = "scenario"
+  )
+
+# one way anova
+anova_all <- aov(value ~ scenario, data = apology_b)
+summary(anova_all)
+
+# pairwise t-test by initiator type
+apology_b1 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_bothyoufirst")
+apology_b2 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_themalone")
+apology_b3 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_boththemfirst")
+apology_b4 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_neither")
+apology_b5 <- apology_b |>
+  filter(scenario == "feelings_youalone" | scenario == "feelings_youaloneforgiven")
+
+t.test(formula = value ~ scenario, data = apology_b1, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b2, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b3, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b4, paired = TRUE)
+t.test(formula = value ~ scenario, data = apology_b5, paired = TRUE)
+```
+
+## Part C
+
+![Figure 4: Proportion of participants choosing either option of variable `outcome_binary1`](results/bar_graph_outcome.png)
+
+The results of the one-proportion Z-test suggest that the proportions of people who chose apologizing first over no one apologizing at all and vice versa are statistically significant from each other (*p* = 0.0001263, 95% CI \[0.644, 0.877\]).
+
+```{r, eval = FALSE}
+# data transformation
+apology_c <- apology_clean |>
+  group_by(outcome_binary1) |> 
+  summarize(n = n()) |> 
+  mutate(prop = n / sum(n))
+
+# bar graph of proportions
+bar_graph_outcome <- apology_c |> 
+  ggplot(aes(outcome_binary1, prop, fill = outcome_binary1)) +
+  geom_bar(stat = "identity") +
+  theme_ggdist() +
+  scale_fill_manual(values = c("#d95f02", "#1b9e77")) +
+  theme(
+    plot.subtitle = element_markdown(lineheight = 0.1),
+    legend.position = "none"
+  ) +
+  scale_x_discrete(labels = c("you first", "neither")) +
+  annotate("text", x = 1, y = 0.4, label = "0.783", color = "white") +
+  annotate("text", x = 2, y = 0.1, label = "0.217", color = "white") +
+  labs(
+    x = "apology scenario",
+    y = "proportion of participants",
+    subtitle = "Participants preferred <b style='color: #d95f02;'>apologizing first</b> 
+    over <b style='color: #1b9e77;'>no one apologizing</b> at all."
+  )
+
+# one prop z test
+prop.test(x = 36, n = 46, p = 0.5, correct = FALSE)
+```
+
+## Part D
+
+![Figure 5: Distribution of description sentiment by initiator type\`](results/boxplot_sentiment.png)
+
+```{r, eval = FALSE}
+## code for reproducibility ----
+# AFINN lexicon rating sentiment keywords from -5 to 5
+lexicon <- get_sentiments("afinn")
+
+# sentiment analysis
+apology_sentiment <- apology_clean |>
+  unnest_tokens(word, describe) |>
+  inner_join(lexicon) |>
+  group_by(ResponseId, initiator_type) |>
+  summarize(sentiment = sum(value) / n())
+
+boxplot_sentiment <- ggplot(apology_sentiment, aes(sentiment, color = initiator_type)) +
+  geom_boxplot() +
+  theme_ggdist() +
+  scale_fill_brewer(
+    palette = "Dark2",
+    aesthetics = c("color","fill"),
+    guide = "none"
+  ) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.subtitle = element_markdown()
+  ) +
+  annotate("text", x = 1.3, y = 0.25, label = "never", color = "#7570B3") +
+  annotate("text", x = 1.5, y = 0.02, label = "conditional", color = "#d95f02") +
+  annotate("text", x = 0.6, y = -0.23, label = "always", color = "#1b9e77") +
+  labs(
+    x = "apology scenario",
+    y = "initiator type",
+    subtitle = "<b>Sentiment</b> of participant descriptions varies by <b>initiator type</b>."
+  )
+```
