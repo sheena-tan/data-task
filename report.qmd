@@ -6,9 +6,12 @@ author: "MASKED"
 date: today
 
 format:
-  html:
+  pdf:
     toc: true
-    embed-resources: true
+    number-sections: true
+    colorlinks: true
+    fig-cap-location: top
+    fig-pos: "H"
     
 execute:
   warning: false
@@ -16,16 +19,37 @@ execute:
 project:
   execute-dir: project
 
-from: markdown+emoji 
-reference-location: margin
-citation-location: margin
 ---
+
+```{r, echo = FALSE}
+default_chunk_hook  <- knitr::knit_hooks$get("chunk")
+
+latex_font_size <- c("Huge", "huge", "LARGE", "Large", 
+                     "large", "normalsize", "small", 
+                     "footnotesize", "scriptsize", "tiny")
+
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- default_chunk_hook(x, options)
+  if(options$size %in% latex_font_size) {
+    paste0("\n \\", options$size, "\n\n", 
+      x, 
+      "\n\n \\normalsize"
+    )
+  } else {
+    x
+  }
+})
+
+```
+
 
 ::: {.callout-tip icon=false}
 
 ## Github Repo Link
 
-[https://github.com/sheena-tan/data-task](https://github.com/sheena-tan/data-task)
+For blind evaluation purposes, please note that this link includes my name. 
+
+[https://github.com/MASKED/data-task](https://github.com/sheena-tan/data-task)
 
 :::
 
@@ -39,6 +63,8 @@ This project uses data provided by the University of Chicago Booth School of Bus
 A glimpse of the data reveals that all respondents (*N = 61*) consented to participate. Removing participants that did not complete the majority of the survey, give legitimate responses, or pass the attention check resulted in *N = 46* total participants.  
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 apology_data <- read_csv(here("data/apology_data.csv"))
 
@@ -92,29 +118,31 @@ This increase varies by initiator type. Interestingly:
 I wonder if these results map onto *agreeableness* as a personality trait then, though everything is likely heavily dependent on by people's lived experiences. I also wonder if people that think they always apologize first actually do, or if they are unable to recall instances where they didn't. It would be interesting to see how they weight the importance of someone else apologizing first; if it's not important to them, maybe they simply do not remember. 
 
 
-::: {#fig-eda layout-ncol=2 layout-nrow=4}
+::: {#fig-eda layout-ncol=3 layout-nrow=3}
 
-![Overall - Apology not returned](results/alone_total.png){#fig-on}
+![Overall - Not returned](results/alone_total.png){#fig-on}
 
-![Overall - Apology returned](results/both_total.png){#fig-or}
+![Overall - Returned](results/both_total.png){#fig-or}
 
-![Always - Apology not returned](results/alone_always.png){#fig-an}
+![Always - Not returned](results/alone_always.png){#fig-an}
 
-![Always - Apology returned](results/both_always.png){#fig-ar}
+![Always - Returned](results/both_always.png){#fig-ar}
 
-![Conditional - Apology not returned](results/alone_cond.png){#fig-cn}
+![Conditional - Not returned](results/alone_cond.png){#fig-cn}
 
-![Conditional - Apology returned](results/both_cond.png){#fig-cr}
+![Conditional - Returned](results/both_cond.png){#fig-cr}
 
-![Never - Apology not returned](results/alone_never.png){#fig-nn}
+![Never - Not returned](results/alone_never.png){#fig-nn}
 
-![Never - Apology returned](results/both_never.png){#fig-nr}
+![Never - Returned](results/both_never.png){#fig-nr}
 
 Feeling ratings by initiator type after (not) receiving a return apology
 :::
 
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 # function to create boxplot + density plot
 plot_density_boxplot <- function(data, x_variable) {
@@ -162,6 +190,8 @@ both_never <- apology_clean |> filter(initiator_type == "never") |>
 We define “whether people care” about getting a return apology as a significant difference in emotional response within participants between the two apology scenarios -- not getting (`feelings_youalone`) and getting (`feelings_bothyoufirst`) a return apology. As the sample is sufficiently large, a paired samples t-test was conducted to compare the two scenarios. 
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 # summary statistics
 apology_long_q1 |> group_by(apology_returned) |>
   summarize(
@@ -215,6 +245,8 @@ To investigate if this variation in the extent of the differences is significant
 
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 # boxplot eda
 apology_wide |> ggplot(aes(initiator_type, .res)) +
@@ -256,6 +288,8 @@ TukeyHSD(anova_initiator)
 We define apology being "simply viewed" as a form of forgiveness as there being no significant difference between receiving a return apology (`feelings_bothyoufirst`) and receiving no return apology but being forgiven (`feelings_youaloneforgiven`).
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 # summary statistics
 apology_long_q3 |> group_by(apology_returned) |>
   summarize(
@@ -279,6 +313,8 @@ t.test(value ~ apology_returned, apology_long_q3, paired = TRUE)
 
 ![Figure 3: Mean emotional reaction rating across apology scenarios](results/bar_graph_desc.png)
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 # data transformation
 col.mean <- apology_clean |>
@@ -304,7 +340,8 @@ bar_graph_desc <- apology_means |>
   geom_bar(stat = "identity") +
   geom_errorbar(aes(ymin = sd_lower, ymax = sd_upper), width = 0.15) +
   theme_ggdist() +
-  scale_fill_manual(values = c("#d95f02", "#d95f02", "#1b9e77", "#1b9e77", "#1b9e77", "#1b9e77")) +
+  scale_fill_manual(values = c("#d95f02", "#d95f02", "#1b9e77", "#1b9e77", 
+                               "#1b9e77", "#1b9e77")) +
   theme(
     plot.subtitle = element_markdown(lineheight = 0.1),
     legend.position = "none"
@@ -330,7 +367,7 @@ The results of the one-way ANOVA to determine if there are differences in emotio
 The results of the paired t-tests between `feelings_youalone` and the other apology scenarios suggest that these differences are all highly significant, but most significant between apologizing alone and mutual apology where the other party apologizes first.
 
 |   scenario     |     t        |      df      |     p        |     95% CI     |
-|----------------|--------------|--------------|--------------|----------------|
+|---------------------------|-------------|--------------|--------------|-----------------|
 | feelings_bothyoufirst     |   12.58     |      45      | 2.458e-16*** | 21.73, 30.01    |
 | feelings_themalone        |   4.287     |      45      | 9.443e-05*** | 6.961, 19.30    |
 | feelings_boththemfirst    |    14.56    |      45      | < 2.2e-16*** | 30.81, 40.71    |
@@ -341,6 +378,8 @@ The results of the paired t-tests between `feelings_youalone` and the other apol
 
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 # data transformation
 apology_b <- apology_clean |>
@@ -381,6 +420,8 @@ t.test(formula = value ~ scenario, data = apology_b5, paired = TRUE)
 The results of the one-proportion Z-test suggest that the proportions of people who chose apologizing first over no one apologizing at all and vice versa are statistically significant from each other (*p* = 0.0001263, 95% CI [0.644, 0.877]). 
 
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 # data transformation
 apology_c <- apology_clean |>
   group_by(outcome_binary1) |> 
@@ -415,6 +456,8 @@ prop.test(x = 36, n = 46, p = 0.5, correct = FALSE)
 ## Part D
 ![Figure 5: Distribution of description sentiment by initiator type`](results/boxplot_sentiment.png)
 ```{r, eval = FALSE}
+#| size: scriptsize
+
 ## code for reproducibility ----
 # AFINN lexicon rating sentiment keywords from -5 to 5
 lexicon <- get_sentiments("afinn")
